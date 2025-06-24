@@ -16,16 +16,29 @@ def seed():
         {
             "email": "admin@example.com",
             "password": "admin123",
-            "role": Role.ADMIN
+            "role": Role.admin
         },
         {
             "email": "manager@example.com",
             "password": "manager123",
-            "role": Role.MANAGER
+            "role": Role.manager
         },
         {
             "email": "user@example.com",
             "password": "user123",
-            "role": Role.USER
+            "role": Role.user
         },
     ]
+
+    for user_data in users:
+        user = User(
+            email=user_data["email"],
+            hashed_password=hash_password(user_data["password"]),
+            role=user_data["role"],
+            is_active=True
+        )
+        db.add(user)
+
+    db.commit()
+    db.close()
+    print("Seed data inserted.")
