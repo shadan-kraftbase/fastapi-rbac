@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from app.api.deps import get_db, get_current_user, role_required
 from app.schemas.user import UserOut, UserUpdate
-from app.db import crud
+from app.services import user_service
 from app.db.models import Role, User
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -22,7 +22,7 @@ def get_all_users(
     _: User = Depends(role_required([Role.ADMIN, Role.MANAGER]))
 ) -> list[UserOut]:
     try:
-        return crud.get_all_users(db)
+        return user_service.get_all_users(db)
     except Exception:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not fetch users.")
 
@@ -33,7 +33,7 @@ def get_user_by_id(
     _: User = Depends(role_required([Role.ADMIN, Role.MANAGER]))
 ):
     try:
-        user = crud.get_user_by_id(db, user_id)
+        user = user_service.get_user_by_id(db, user_id)
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
         return user
@@ -50,14 +50,14 @@ def update_user(
     current_user: User = Depends(get_current_user)
 ):
     try:
-        user_to_update = crud.get_user_by_id(db, user_id)
+        user_to_update = user_service.get_user_by_id(db, user_id)
         if not user_to_update:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
         if current_user.role not in [Role.ADMIN, Role.MANAGER] and user_to_update.id != current_user.id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
 
-        return crud.update_user(db, user_to_update, user_update.dict(exclude_unset=True))
+        return user_service.update_user(db, user_to_update, user_update.dict(exclude_unset=True))
     except HTTPException as http_exc:
         raise http_exc
     except SQLAlchemyError:
@@ -74,10 +74,10 @@ def delete_user_route(
     _: User = Depends(role_required([Role.ADMIN]))
 ):
     try:
-        user_to_delete = crud.get_user_by_id(db, user_id)
+        user_to_delete = user_service.get_user_by_id(db, user_id)
         if not user_to_delete:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-        crud.delete_user(db, user_to_delete)
+        user_service.delete_user(db, user_to_delete)
         return None
     except HTTPException as http_exc:
         raise http_exc
